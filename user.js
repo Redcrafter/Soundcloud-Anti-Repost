@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Soundcloud Anti Repost
-// @version      1.0
+// @version      1.1
 // @author       Redcrafter
 // @description  Remove reposts from soundcloud
 // @license      MIT
@@ -17,30 +17,23 @@ function removeReposts() {
     }
 }
 
-let playManager;
-
-// Partly taken from https://github.com/web-scrobbler/web-scrobbler/blob/master/src/connectors/soundcloud-dom-inject.js
 // Searches for the playerManager module
-unsafeWindow.webpackJsonp([], {
-    0: function (e, t, _require) {
-        let modules = _require.c;
+function module(e, t, _require) {
+    let modules = _require.c;
 
-        for (let moduleid in modules) {
-            if (modules.hasOwnProperty(moduleid)) {
-                let el = _require(moduleid);
+    for (let moduleid in modules) {
+        if (modules.hasOwnProperty(moduleid)) {
+            let el = _require(moduleid);
 
-                if (typeof el.playCurrent === 'function') {
-                    playManager = el;
-                    return;
-                }
+            if (typeof el.playCurrent === 'function') {
+                init(el);
+                break;
             }
         }
     }
-});
+}
 
-if (!playManager) {
-    throw new Error("Unable to find playManager.");
-} else {
+function init(playManager) {
     // Inject a function to check for reposts
     let oldSet = playManager.setCurrentItem;
     playManager.setCurrentItem = (e) => {
@@ -49,9 +42,9 @@ if (!playManager) {
             // Not sure if this safe
             r = e._submodels[0]._events["change:user"][1].context.options.actionType === "repost";
         } catch (error) {
-            console.error("An Exception occoured while trying to determine repost status");
+            // console.error("An Exception occoured while trying to determine repost status");
         }
-        
+
         if (r) {
             playManager.removeItem(e);
             playManager.playNext();
@@ -62,3 +55,6 @@ if (!playManager) {
 
     setInterval(removeReposts, 500);
 }
+
+// injection our own module
+unsafeWindow.webpackJsonp.push([[1000000], { 1000000: module }, [[1000000]]]);
